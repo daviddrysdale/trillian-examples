@@ -59,7 +59,7 @@ script:
   - |
       # Check re-generation didn't change anything.
       echo "Checking that generated files are the same as checked-in versions."
-      git diff --  --exit-code
+      git diff --exit-code --
   - |
       if [[ "${WITH_ETCD}" == "true" ]]; then
         export ETCD_DIR="${GOPATH}/bin"
