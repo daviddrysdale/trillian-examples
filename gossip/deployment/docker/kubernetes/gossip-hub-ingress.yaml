@@ -1,0 +1,10 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: gossip-hub-ingress
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: gossip-hub-global-static-ip
+spec:
+  backend:
+    serviceName: gossip-hub-service
+    servicePort: 16962

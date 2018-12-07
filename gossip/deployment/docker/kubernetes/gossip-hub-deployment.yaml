@@ -1,0 +1,89 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    io.kompose.service: gossip-hub
+  name: gossip-hub-deployment
+spec:
+  replicas: 2
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        io.kompose.service: gossip-hub
+    spec:
+      containers:
+        - name: gossip-hub
+          command: ["/go/bin/hub_server",
+          "--http_endpoint=0.0.0.0:16962",
+          "--metrics_endpoint=0.0.0.0:16963",
+          "--log_rpc_server=dns:///trillian-log-service",
+          "--log_config=/hub-config/gossip-hub.cfg",
+          "--alsologtostderr"
+          ]
+          image: gcr.io/${PROJECT_ID}/hub_server:${IMAGE_TAG}
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 1.8
+            requests:
+              cpu: 300m
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+          readinessProbe:
+            exec:
+              command:
+              - curl
+              - -f
+              - http://localhost:16963/metrics
+            failureThreshold: 3
+            periodSeconds: 30
+            timeoutSeconds: 30
+          env:
+            - name: CLOUD_PROJECT
+              valueFrom:
+                configMapKeyRef:
+                  name: ctfe-configmap
+                  key: cloud-project
+          ports:
+          - containerPort: 16962
+            name: http
+          - containerPort: 16963
+            name: metrics
+          volumeMounts:
+          - name: hub-config-volume
+            mountPath: /hub-config
+        - name: prometheus-to-sd
+          image: gcr.io/google-containers/prometheus-to-sd:v0.3.2
+          ports:
+            - name: profiler
+              containerPort: 6060
+          command:
+            - /monitor
+            - --stackdriver-prefix=custom.googleapis.com
+            - --source=ctfe:http://localhost:16963/metrics
+            - --pod-id=$(POD_NAME)
+            - --namespace-id=$(POD_NAMESPACE)
+            - --scrape-interval=5s
+            - --export-interval=60s
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      volumes:
+        - name: hub-config-volume
+          configMap:
+            name: hub-configmap
+            items:
+            - key: hub-config-file
+              path: gossip-hub.cfg
+      restartPolicy: Always
+status: {}

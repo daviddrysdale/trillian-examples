@@ -1,0 +1,10 @@
+steps:
+- id: build_hub
+  name: gcr.io/cloud-builders/docker
+  args:
+  - build
+  - --file=gossip/deployment/docker/hub/Dockerfile
+  - --tag=gcr.io/${PROJECT_ID}/gossip-hub:${TAG_NAME}
+  - .
+images:
+- gcr.io/${PROJECT_ID}/gossip-hub:${TAG_NAME}
